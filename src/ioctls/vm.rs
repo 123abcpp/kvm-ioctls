@@ -111,6 +111,25 @@ impl VmFd {
         }
     }
 
+    ///An extension to KVM_SET_USER_MEMORY_REGION that allows mapping guest_memfd memory into a guest.
+    ///All fields shared with KVM_SET_USER_MEMORY_REGION identically. 
+    ///
+    //Userspace can set KVM_MEM_GUEST_MEMFD in flags to have KVM bind the memory region to a given 
+    ///guest_memfd range of [guest_memfd_offset, guest_memfd_offset + memory_size].
+    ///The target guest_memfd must point at a file created via KVM_CREATE_GUEST_MEMFD on the current VM, 
+    ///and the target range must not be bound to any other memory region. All standard bounds checks apply (use common sense).
+
+    pub unsafe fn set_user_memory_region2(
+        &self,
+        user_memory_region2: kvm_userspace_memory_region2,
+    ) -> Result<()> {
+        let ret = ioctl_with_ref(self, KVM_SET_USER_MEMORY_REGION2(), &user_memory_region2);
+        if ret == 0 {
+            Ok(())
+        } else {
+            Err(errno::Error::last())
+        }
+    }
     /// Sets the address of the three-page region in the VM's address space.
     ///
     /// See the documentation for `KVM_SET_TSS_ADDR`.
@@ -1501,6 +1520,26 @@ impl VmFd {
         // Safe because we know that our file is a VM fd, we know the kernel will only read the
         // correct amount of memory from our pointer, and we verify the return result.
         let ret = unsafe { ioctl_with_ref(self, KVM_MEMORY_ENCRYPT_UNREG_REGION(), memory_region) };
+        if ret == 0 {
+            Ok(())
+        } else {
+            Err(errno::Error::last())
+        }
+    }
+
+    ///Creates an anonymous file and returns a file descriptor that refers to it.
+    pub fn create_guest_memfd(&self, create_guest_memfd: &kvm_create_guest_memfd) -> Result<i32> {
+        unsafe {
+            match ioctl_with_ref(self, KVM_CREATE_GUEST_MEMFD(), create_guest_memfd) {
+                -1 => Err(errno::Error::last()),
+                fd => Ok(fd),
+            }}
+    }
+
+    ///Allows userspace to set memory attributes for a range of guest physical memory.
+
+    pub fn set_memory_attributes(&self, memory_attributes: &kvm_memory_attributes) -> Result<()> {
+        let ret = unsafe { ioctl_with_ref(self, KVM_SET_MEMORY_ATTRIBUTES(), memory_attributes) };
         if ret == 0 {
             Ok(())
         } else {
