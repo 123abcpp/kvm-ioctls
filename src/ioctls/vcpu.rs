@@ -94,9 +94,14 @@ pub enum VcpuExit<'a> {
     /// Corresponds to KVM_EXIT_HYPERV.
     Hyperv,
     /// Corresponds to KVM_EXIT_VMGEXIT.
-    VMGExit,
+    VMGExit(Vmgexit),
 }
-
+#[derive(Debug)]
+pub enum Vmgexit {
+    PscMsr(u64, u8, u32),
+    Psc(u64, u64),
+    ExtGuestReq(u64, u64, u32),
+}
 /// Wrapper over KVM vCPU ioctls.
 #[derive(Debug)]
 pub struct VcpuFd {
@@ -1392,7 +1397,34 @@ impl VcpuFd {
                     Ok(VcpuExit::IoapicEoi(eoi.vector))
                 }
                 KVM_EXIT_HYPERV => Ok(VcpuExit::Hyperv),
-                KVM_EXIT_VMGEXIT => Ok(VcpuExit::Hyperv),
+                KVM_EXIT_VMGEXIT => {
+                    const KVM_USER_VMGEXIT_PSC_MSR: u32 = 1;
+                    const KVM_USER_VMGEXIT_PSC: u32 = 2;
+                    const KVM_USER_VMGEXIT_EXT_GUEST_REQ: u32 = 3;
+                    let vmgexit = unsafe { run.__bindgen_anon_1.vmgexit };
+                    let type_ = vmgexit.type_;
+                    unsafe {
+                        match type_ {
+                            KVM_USER_VMGEXIT_PSC_MSR => Ok(VcpuExit::VMGExit(Vmgexit::PscMsr(
+                                vmgexit.u.psc_msr.gpa,
+                                vmgexit.u.psc_msr.op,
+                                vmgexit.u.psc_msr.ret,
+                            ))),
+                            KVM_USER_VMGEXIT_PSC => Ok(VcpuExit::VMGExit(Vmgexit::Psc(
+                                vmgexit.u.psc.shared_gpa,
+                                vmgexit.u.psc.ret,
+                            ))),
+                            KVM_USER_VMGEXIT_EXT_GUEST_REQ => {
+                                Ok(VcpuExit::VMGExit(Vmgexit::ExtGuestReq(
+                                    vmgexit.u.ext_guest_req.data_gpa,
+                                    vmgexit.u.ext_guest_req.data_npages,
+                                    vmgexit.u.ext_guest_req.ret,
+                                )))
+                            }
+                            _ => Err(errno::Error::new(EINVAL)),
+                        }
+                    }
+                }
                 r => panic!("unknown kvm exit reason: {}", r),
             }
         } else {
