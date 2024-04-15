@@ -93,6 +93,8 @@ pub enum VcpuExit<'a> {
     IoapicEoi(u8 /* vector */),
     /// Corresponds to KVM_EXIT_HYPERV.
     Hyperv,
+    /// Corresponds to KVM_EXIT_VMGEXIT.
+    VMGExit,
 }
 
 /// Wrapper over KVM vCPU ioctls.
@@ -1390,6 +1392,7 @@ impl VcpuFd {
                     Ok(VcpuExit::IoapicEoi(eoi.vector))
                 }
                 KVM_EXIT_HYPERV => Ok(VcpuExit::Hyperv),
+                KVM_EXIT_VMGEXIT => Ok(VcpuExit::Hyperv),
                 r => panic!("unknown kvm exit reason: {}", r),
             }
         } else {
@@ -1439,8 +1442,6 @@ impl VcpuFd {
             Err(errno::Error::new(ret))
         }
     }
-
-
 
     /// Sets the specified vCPU TSC frequency.
     ///
