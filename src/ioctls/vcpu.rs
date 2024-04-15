@@ -97,9 +97,13 @@ pub enum VcpuExit<'a> {
     VMGExit(Vmgexit),
 }
 #[derive(Debug)]
+///Vmgexit union
 pub enum Vmgexit {
+    /// Psc Request by MSR
     PscMsr(u64, u8, u32),
+    /// Psc Request by GHCB
     Psc(u64, u64),
+    /// Extension Request by GHCB
     ExtGuestReq(u64, u64, u32),
 }
 /// Wrapper over KVM vCPU ioctls.
