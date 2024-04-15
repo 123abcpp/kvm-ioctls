@@ -100,11 +100,11 @@ pub enum VcpuExit<'a> {
 ///Vmgexit union
 pub enum Vmgexit {
     /// Psc Request by MSR
-    PscMsr(u64, u8, u32),
+    PscMsr(u64, u8, *mut u32),
     /// Psc Request by GHCB
-    Psc(u64, u64),
+    Psc(u64, *mut u64),
     /// Extension Request by GHCB
-    ExtGuestReq(u64, u64, u32),
+    ExtGuestReq(u64, u64, *mut u32),
 }
 /// Wrapper over KVM vCPU ioctls.
 #[derive(Debug)]
@@ -1412,17 +1412,17 @@ impl VcpuFd {
                             KVM_USER_VMGEXIT_PSC_MSR => Ok(VcpuExit::VMGExit(Vmgexit::PscMsr(
                                 vmgexit.u.psc_msr.gpa,
                                 vmgexit.u.psc_msr.op,
-                                vmgexit.u.psc_msr.ret,
+                                &vmgexit.u.psc_msr.ret as *const _ as *mut _,
                             ))),
                             KVM_USER_VMGEXIT_PSC => Ok(VcpuExit::VMGExit(Vmgexit::Psc(
                                 vmgexit.u.psc.shared_gpa,
-                                vmgexit.u.psc.ret,
+                                &vmgexit.u.psc.ret as *const _ as *mut _,
                             ))),
                             KVM_USER_VMGEXIT_EXT_GUEST_REQ => {
                                 Ok(VcpuExit::VMGExit(Vmgexit::ExtGuestReq(
                                     vmgexit.u.ext_guest_req.data_gpa,
                                     vmgexit.u.ext_guest_req.data_npages,
-                                    vmgexit.u.ext_guest_req.ret,
+                                    &vmgexit.u.ext_guest_req.ret as *const _ as *mut _,
                                 )))
                             }
                             _ => Err(errno::Error::new(EINVAL)),
