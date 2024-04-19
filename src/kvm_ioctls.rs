@@ -112,7 +112,7 @@ ioctl_ior_nr!(KVM_MEMORY_ENCRYPT_REG_REGION, KVMIO, 0xbb, kvm_enc_region);
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 ioctl_ior_nr!(KVM_MEMORY_ENCRYPT_UNREG_REGION, KVMIO, 0xbc, kvm_enc_region);
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-ioctl_iow_nr!(KVM_SET_MEMORY_ATTRIBUTES, KVMIO, 0xd3, kvm_memory_attributes);
+ioctl_iow_nr!(KVM_SET_MEMORY_ATTRIBUTES, KVMIO, 0xd2, kvm_memory_attributes);
 ioctl_iowr_nr!(KVM_CREATE_GUEST_MEMFD, KVMIO, 0xd4, kvm_create_guest_memfd);
 // Ioctls for VCPU fds.
 
