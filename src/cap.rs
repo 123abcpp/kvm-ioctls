@@ -144,4 +144,5 @@ pub enum Cap {
     MsiDevid = KVM_CAP_MSI_DEVID,
     HypervSynic = KVM_CAP_HYPERV_SYNIC,
     HypervSynic2 = KVM_CAP_HYPERV_SYNIC2,
+    VmType = KVM_CAP_VM_TYPES,
 }
