@@ -102,7 +102,7 @@ pub enum VcpuExit<'a> {
 }
 
 #[derive(Debug)]
-///Vmgexit union
+///TDXExit union
 pub enum TDXExit {
     /// map gpa from shared to private or private to shared
     MapGpa(u64, u64, *const u64),

@@ -215,7 +215,7 @@ mod ioctls;
 pub use cap::Cap;
 pub use ioctls::device::DeviceFd;
 pub use ioctls::system::Kvm;
-pub use ioctls::vcpu::{VcpuExit, VcpuFd,Vmgexit};
+pub use ioctls::vcpu::{VcpuExit, VcpuFd,Vmgexit, TDXExit};
 pub use ioctls::vm::{IoEventAddress, NoDatamatch, VmFd};
 // The following example is used to verify that our public
 // structures are exported properly.
