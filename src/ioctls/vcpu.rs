@@ -95,7 +95,22 @@ pub enum VcpuExit<'a> {
     Hyperv,
     /// Corresponds to KVM_EXIT_VMGEXIT.
     VMGExit(Vmgexit),
+    /// Corresponds to KVM_EXIT_TDX.
+    TDXExit(TDXExit),
+    /// Corresponds to KVM_EXIT_MEMORY_FAULT.
+    MemoryFault(u64, u64, bool),
 }
+
+#[derive(Debug)]
+///Vmgexit union
+pub enum TDXExit {
+    /// map gpa from shared to private or private to shared
+    MapGpa(u64, u64, *const u64),
+    //GetQuote
+    // ReportFatalError
+    // SetupEventNotifyInterrupt
+}
+
 #[derive(Debug)]
 ///Vmgexit union
 pub enum Vmgexit {
@@ -1428,6 +1443,38 @@ impl VcpuFd {
                             _ => Err(errno::Error::new(EINVAL)),
                         }
                     }
+                }
+                #[allow(dead_code)]
+                KVM_EXIT_TDX => {
+                    let tdx_exit = unsafe { run.__bindgen_anon_1.tdx_exit };
+                    let type_ = tdx_exit.type_;
+                    const TDG_VP_VMCALL_MAP_GPA: u64 = 0x10001;
+                    const TDG_VP_VMCALL_GET_QUOTE: u64 = 0x10002;
+                    const TDG_VP_VMCALL_REPORT_FATAL_ERROR: u64 = 0x10003;
+                    const TDG_VP_VMCALL_SETUP_EVENT_NOTIFY_INTERRUPT: u64 = 0x10004;
+                    match type_ {
+                        KVM_EXIT_TDX_VMCALL => {
+                            let vmcall = unsafe { tdx_exit.u.vmcall };
+                            match vmcall.subfunction {
+                                TDG_VP_VMCALL_MAP_GPA => Ok(VcpuExit::TDXExit(TDXExit::MapGpa(
+                                    vmcall.in_r12,
+                                    vmcall.in_r13,
+                                    &vmcall.status_code as *const _,
+                                ))),
+                                _ => Err(errno::Error::new(EINVAL)),
+                            }
+                        }
+                        _ => Err(errno::Error::new(EINVAL)),
+                    }
+                }
+
+                KVM_EXIT_MEMORY_FAULT => {
+                    let memory = unsafe { run.__bindgen_anon_1.memory };
+                    Ok(VcpuExit::MemoryFault(
+                        memory.gpa,
+                        memory.size,
+                        memory.flags & KVM_MEMORY_EXIT_FLAG_PRIVATE > 0,
+                    ))
                 }
                 r => panic!("unknown kvm exit reason: {}", r),
             }
