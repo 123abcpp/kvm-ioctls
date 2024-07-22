@@ -105,7 +105,7 @@ pub enum VcpuExit<'a> {
 ///TDXExit union
 pub enum TDXExit {
     /// map gpa from shared to private or private to shared
-    MapGpa(u64, u64, *const u64),
+    MapGpa(u64, u64, *mut u64),
     //GetQuote
     // ReportFatalError
     // SetupEventNotifyInterrupt
@@ -1459,7 +1459,7 @@ impl VcpuFd {
                                 TDG_VP_VMCALL_MAP_GPA => Ok(VcpuExit::TDXExit(TDXExit::MapGpa(
                                     vmcall.in_r12,
                                     vmcall.in_r13,
-                                    &vmcall.status_code as *const _,
+                                    &vmcall.status_code as *const _ as *mut _,
                                 ))),
                                 _ => Err(errno::Error::new(EINVAL)),
                             }
