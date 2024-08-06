@@ -1425,34 +1425,6 @@ impl VcpuFd {
                     Ok(VcpuExit::IoapicEoi(eoi.vector))
                 }
                 KVM_EXIT_HYPERV => Ok(VcpuExit::Hyperv),
-                KVM_EXIT_VMGEXIT => {
-                    const KVM_USER_VMGEXIT_PSC_MSR: u32 = 1;
-                    const KVM_USER_VMGEXIT_PSC: u32 = 2;
-                    const KVM_USER_VMGEXIT_EXT_GUEST_REQ: u32 = 3;
-                    let vmgexit = unsafe { run.__bindgen_anon_1.vmgexit };
-                    let type_ = vmgexit.type_;
-                    unsafe {
-                        match type_ {
-                            KVM_USER_VMGEXIT_PSC_MSR => Ok(VcpuExit::VMGExit(Vmgexit::PscMsr(
-                                vmgexit.u.psc_msr.gpa,
-                                vmgexit.u.psc_msr.op,
-                                &vmgexit.u.psc_msr.ret as *const _ as *mut _,
-                            ))),
-                            KVM_USER_VMGEXIT_PSC => Ok(VcpuExit::VMGExit(Vmgexit::Psc(
-                                vmgexit.u.psc.shared_gpa,
-                                &vmgexit.u.psc.ret as *const _ as *mut _,
-                            ))),
-                            KVM_USER_VMGEXIT_EXT_GUEST_REQ => {
-                                Ok(VcpuExit::VMGExit(Vmgexit::ExtGuestReq(
-                                    vmgexit.u.ext_guest_req.data_gpa,
-                                    vmgexit.u.ext_guest_req.data_npages,
-                                    &vmgexit.u.ext_guest_req.ret as *const _ as *mut _,
-                                )))
-                            }
-                            _ => Err(errno::Error::new(EINVAL)),
-                        }
-                    }
-                }
                 #[allow(dead_code)]
                 KVM_EXIT_TDX => {
                     let tdx_exit = unsafe { run.__bindgen_anon_1.tdx_exit };
