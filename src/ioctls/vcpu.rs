@@ -1255,6 +1255,15 @@ impl VcpuFd {
         Ok(())
     }
 
+    ///Map the initial memory to the guset in TDX
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    pub fn memory_mapping(&self, mapping: &kvm_memory_mapping) -> Result<()> {
+        let ret = unsafe { ioctl_with_ref(self, KVM_MEMORY_MAPPING(), mapping) };
+        if ret != 0 {
+            return Err(errno::Error::last());
+        }
+        Ok(())
+    }
     /// Triggers the running of the current virtual CPU returning an exit reason.
     ///
     /// See documentation for `KVM_RUN`.
