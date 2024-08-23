@@ -94,9 +94,7 @@ pub enum VcpuExit<'a> {
     /// Corresponds to KVM_EXIT_HYPERV.
     Hyperv,
     /// Corresponds to KVM_EXIT_VMGEXIT.
-    VMGExit(Vmgexit),
-    /// Corresponds to KVM_EXIT_TDX.
-    TDXExit(TDXExit),
+    VMGExit(Vmgexit<'a>),
     /// Corresponds to KVM_EXIT_MEMORY_FAULT.
     MemoryFault(u64, u64, bool),
 }
@@ -113,13 +111,13 @@ pub enum TDXExit {
 
 #[derive(Debug)]
 ///Vmgexit union
-pub enum Vmgexit {
+pub enum Vmgexit<'a> {
     /// Psc Request by MSR
-    PscMsr(u64, u8, *mut u32),
+    PscMsr(u64, u8, &'a mut u32),
     /// Psc Request by GHCB
-    Psc(u64, *mut u64),
+    Psc(u64, &'a mut u64),
     /// Extension Request by GHCB
-    ExtGuestReq(u64, u64, *mut u32),
+    ExtGuestReq(u64, u64, &'a mut u32),
 }
 /// Wrapper over KVM vCPU ioctls.
 #[derive(Debug)]
@@ -1420,54 +1418,30 @@ impl VcpuFd {
                     const KVM_USER_VMGEXIT_PSC_MSR: u32 = 1;
                     const KVM_USER_VMGEXIT_PSC: u32 = 2;
                     const KVM_USER_VMGEXIT_EXT_GUEST_REQ: u32 = 3;
-                    let vmgexit = unsafe { run.__bindgen_anon_1.vmgexit };
+                    let vmgexit = unsafe { &mut run.__bindgen_anon_1.vmgexit };
                     let type_ = vmgexit.type_;
                     unsafe {
                         match type_ {
                             KVM_USER_VMGEXIT_PSC_MSR => Ok(VcpuExit::VMGExit(Vmgexit::PscMsr(
                                 vmgexit.u.psc_msr.gpa,
                                 vmgexit.u.psc_msr.op,
-                                &vmgexit.u.psc_msr.ret as *const _ as *mut _,
+                                &mut vmgexit.u.psc_msr.ret,
                             ))),
                             KVM_USER_VMGEXIT_PSC => Ok(VcpuExit::VMGExit(Vmgexit::Psc(
                                 vmgexit.u.psc.shared_gpa,
-                                &vmgexit.u.psc.ret as *const _ as *mut _,
+                                &mut vmgexit.u.psc.ret,
                             ))),
                             KVM_USER_VMGEXIT_EXT_GUEST_REQ => {
                                 Ok(VcpuExit::VMGExit(Vmgexit::ExtGuestReq(
                                     vmgexit.u.ext_guest_req.data_gpa,
                                     vmgexit.u.ext_guest_req.data_npages,
-                                    &vmgexit.u.ext_guest_req.ret as *const _ as *mut _,
+                                    &mut vmgexit.u.ext_guest_req.ret,
                                 )))
                             }
                             _ => Err(errno::Error::new(EINVAL)),
                         }
                     }
                 }
-                #[allow(dead_code)]
-                KVM_EXIT_TDX => {
-                    let tdx_exit = unsafe { run.__bindgen_anon_1.tdx_exit };
-                    let type_ = tdx_exit.type_;
-                    const TDG_VP_VMCALL_MAP_GPA: u64 = 0x10001;
-                    const TDG_VP_VMCALL_GET_QUOTE: u64 = 0x10002;
-                    const TDG_VP_VMCALL_REPORT_FATAL_ERROR: u64 = 0x10003;
-                    const TDG_VP_VMCALL_SETUP_EVENT_NOTIFY_INTERRUPT: u64 = 0x10004;
-                    match type_ {
-                        KVM_EXIT_TDX_VMCALL => {
-                            let vmcall = unsafe { tdx_exit.u.vmcall };
-                            match vmcall.subfunction {
-                                TDG_VP_VMCALL_MAP_GPA => Ok(VcpuExit::TDXExit(TDXExit::MapGpa(
-                                    vmcall.in_r12,
-                                    vmcall.in_r13,
-                                    &vmcall.status_code as *const _ as *mut _,
-                                ))),
-                                _ => Err(errno::Error::new(EINVAL)),
-                            }
-                        }
-                        _ => Err(errno::Error::new(EINVAL)),
-                    }
-                }
-
                 KVM_EXIT_MEMORY_FAULT => {
                     let memory = unsafe { run.__bindgen_anon_1.memory };
                     Ok(VcpuExit::MemoryFault(
