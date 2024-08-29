@@ -99,6 +99,18 @@ pub enum VcpuExit<'a> {
     MemoryFault(u64, u64, bool),
 }
 
+impl PartialEq for VcpuExit<'_> {
+    fn ne(&self, other: &Self) -> bool {
+        !self.eq(other)
+    }
+    
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
+        }
+    }
+}
+
 #[derive(Debug)]
 ///TDXExit union
 pub enum TDXExit<'a> {
