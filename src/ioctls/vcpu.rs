@@ -93,34 +93,22 @@ pub enum VcpuExit<'a> {
     IoapicEoi(u8 /* vector */),
     /// Corresponds to KVM_EXIT_HYPERV.
     Hyperv,
-    /// Corresponds to KVM_EXIT_VMGEXIT.
-    VMGExit(Vmgexit),
     /// Corresponds to KVM_EXIT_TDX.
-    TDXExit(TDXExit),
+    TDXExit(TDXExit<'a>),
     /// Corresponds to KVM_EXIT_MEMORY_FAULT.
     MemoryFault(u64, u64, bool),
 }
 
 #[derive(Debug)]
 ///TDXExit union
-pub enum TDXExit {
+pub enum TDXExit<'a> {
     /// map gpa from shared to private or private to shared
-    MapGpa(u64, u64, *mut u64),
+    MapGpa(u64, u64, &'a mut u64),
     //GetQuote
     // ReportFatalError
     // SetupEventNotifyInterrupt
 }
 
-#[derive(Debug)]
-///Vmgexit union
-pub enum Vmgexit {
-    /// Psc Request by MSR
-    PscMsr(u64, u8, *mut u32),
-    /// Psc Request by GHCB
-    Psc(u64, *mut u64),
-    /// Extension Request by GHCB
-    ExtGuestReq(u64, u64, *mut u32),
-}
 /// Wrapper over KVM vCPU ioctls.
 #[derive(Debug)]
 pub struct VcpuFd {
@@ -1427,7 +1415,7 @@ impl VcpuFd {
                 KVM_EXIT_HYPERV => Ok(VcpuExit::Hyperv),
                 #[allow(dead_code)]
                 KVM_EXIT_TDX => {
-                    let tdx_exit = unsafe { run.__bindgen_anon_1.tdx_exit };
+                    let tdx_exit = unsafe { &mut run.__bindgen_anon_1.tdx_exit };
                     let type_ = tdx_exit.type_;
                     const TDG_VP_VMCALL_MAP_GPA: u64 = 0x10001;
                     const TDG_VP_VMCALL_GET_QUOTE: u64 = 0x10002;
@@ -1435,12 +1423,12 @@ impl VcpuFd {
                     const TDG_VP_VMCALL_SETUP_EVENT_NOTIFY_INTERRUPT: u64 = 0x10004;
                     match type_ {
                         KVM_EXIT_TDX_VMCALL => {
-                            let vmcall = unsafe { tdx_exit.u.vmcall };
+                            let vmcall = unsafe { &mut tdx_exit.u.vmcall };
                             match vmcall.subfunction {
                                 TDG_VP_VMCALL_MAP_GPA => Ok(VcpuExit::TDXExit(TDXExit::MapGpa(
                                     vmcall.in_r12,
                                     vmcall.in_r13,
-                                    &vmcall.status_code as *const _ as *mut _,
+                                    &mut vmcall.status_code,
                                 ))),
                                 _ => Err(errno::Error::new(EINVAL)),
                             }
