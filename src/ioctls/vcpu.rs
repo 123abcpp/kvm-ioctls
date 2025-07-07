@@ -116,7 +116,9 @@ impl PartialEq for VcpuExit<'_> {
 pub enum TDXExit<'a> {
     /// map gpa from shared to private or private to shared
     MapGpa(u64, u64, &'a mut u64),
-    //GetQuote
+    /// request to generate a TD-Quote signing by
+    /// a service hosting TD-Quoting Enclave in the host.
+    GetQuote(u64, u64, &'a mut u64),
     // ReportFatalError
     // SetupEventNotifyInterrupt
 }
@@ -1442,6 +1444,10 @@ impl VcpuFd {
                                     vmcall.in_r13,
                                     &mut vmcall.status_code,
                                 ))),
+                                TDG_VP_VMCALL_GET_QUOTE => Ok(VcpuExit::TDXExit( TDXExit::GetQuote(
+                                    vmcall.in_r12,
+                                    vmcall.in_r13,
+                                    &mut vmcall.status_code))),
                                 _ => Err(errno::Error::new(EINVAL)),
                             }
                         }
