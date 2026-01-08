@@ -95,6 +95,8 @@ pub enum VcpuExit<'a> {
     Hyperv,
     /// Corresponds to KVM_EXIT_TDX.
     TDXExit(TDXExit<'a>),
+    /// Corresponds to KVM_EXIT_VMGEXIT.(SEV)
+    VMGExit(Vmgexit<'a>),
     /// Corresponds to KVM_EXIT_MEMORY_FAULT.
     MemoryFault(u64, u64, bool),
 }
@@ -121,6 +123,17 @@ pub enum TDXExit<'a> {
     GetQuote(u64, u64, &'a mut u64),
     // ReportFatalError
     // SetupEventNotifyInterrupt
+}
+
+#[derive(Debug)]
+///Vmgexit union
+pub enum Vmgexit<'a> {
+    /// Psc Request by MSR
+    PscMsr(u64, u8, &'a mut u32),
+    /// Psc Request by GHCB
+    Psc(u64, &'a mut u64),
+    /// Extension Request by GHCB
+    ExtGuestReq(u64, u64, &'a mut u32),
 }
 
 /// Wrapper over KVM vCPU ioctls.
@@ -1454,7 +1467,34 @@ impl VcpuFd {
                         _ => Err(errno::Error::new(EINVAL)),
                     }
                 }
-
+                KVM_EXIT_VMGEXIT => {
+                    const KVM_USER_VMGEXIT_PSC_MSR: u32 = 1;
+                    const KVM_USER_VMGEXIT_PSC: u32 = 2;
+                    const KVM_USER_VMGEXIT_EXT_GUEST_REQ: u32 = 3;
+                    let vmgexit = unsafe { &mut run.__bindgen_anon_1.vmgexit };
+                    let type_ = vmgexit.type_;
+                    unsafe {
+                        match type_ {
+                            KVM_USER_VMGEXIT_PSC_MSR => Ok(VcpuExit::VMGExit(Vmgexit::PscMsr(
+                                vmgexit.u.psc_msr.gpa,
+                                vmgexit.u.psc_msr.op,
+                                &mut vmgexit.u.psc_msr.ret,
+                            ))),
+                            KVM_USER_VMGEXIT_PSC => Ok(VcpuExit::VMGExit(Vmgexit::Psc(
+                                vmgexit.u.psc.shared_gpa,
+                                &mut vmgexit.u.psc.ret,
+                            ))),
+                            KVM_USER_VMGEXIT_EXT_GUEST_REQ => {
+                                Ok(VcpuExit::VMGExit(Vmgexit::ExtGuestReq(
+                                    vmgexit.u.ext_guest_req.data_gpa,
+                                    vmgexit.u.ext_guest_req.data_npages,
+                                    &mut vmgexit.u.ext_guest_req.ret,
+                                )))
+                            }
+                            _ => Err(errno::Error::new(EINVAL)),
+                        }
+                    }
+                }
                 KVM_EXIT_MEMORY_FAULT => {
                     let memory = unsafe { run.__bindgen_anon_1.memory };
                     Ok(VcpuExit::MemoryFault(
