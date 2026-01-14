@@ -119,6 +119,7 @@ impl VmFd {
     ///The target guest_memfd must point at a file created via KVM_CREATE_GUEST_MEMFD on the current VM, 
     ///and the target range must not be bound to any other memory region. All standard bounds checks apply (use common sense).
 
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     pub unsafe fn set_user_memory_region2(
         &self,
         user_memory_region2: kvm_userspace_memory_region2,
@@ -1528,6 +1529,7 @@ impl VmFd {
     }
 
     ///Creates an anonymous file and returns a file descriptor that refers to it.
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     pub fn create_guest_memfd(&self, create_guest_memfd: &kvm_create_guest_memfd) -> Result<i32> {
         unsafe {
             match ioctl_with_ref(self, KVM_CREATE_GUEST_MEMFD(), create_guest_memfd) {
@@ -1538,6 +1540,7 @@ impl VmFd {
 
     ///Allows userspace to set memory attributes for a range of guest physical memory.
 
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     pub fn set_memory_attributes(&self, memory_attributes: &kvm_memory_attributes) -> Result<()> {
         let ret = unsafe { ioctl_with_ref(self, KVM_SET_MEMORY_ATTRIBUTES(), memory_attributes) };
         if ret == 0 {

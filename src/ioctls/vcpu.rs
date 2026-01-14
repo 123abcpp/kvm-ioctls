@@ -1441,6 +1441,7 @@ impl VcpuFd {
                 }
                 KVM_EXIT_HYPERV => Ok(VcpuExit::Hyperv),
                 #[allow(dead_code)]
+                #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
                 KVM_EXIT_TDX => {
                     let tdx_exit = unsafe { &mut run.__bindgen_anon_1.tdx_exit };
                     let type_ = tdx_exit.type_;
@@ -1467,6 +1468,7 @@ impl VcpuFd {
                         _ => Err(errno::Error::new(EINVAL)),
                     }
                 }
+                #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
                 KVM_EXIT_VMGEXIT => {
                     const KVM_USER_VMGEXIT_PSC_MSR: u32 = 1;
                     const KVM_USER_VMGEXIT_PSC: u32 = 2;
