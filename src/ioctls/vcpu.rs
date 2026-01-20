@@ -1508,7 +1508,20 @@ impl VcpuFd {
                 r => panic!("unknown kvm exit reason: {}", r),
             }
         } else {
-            Err(errno::Error::last())
+            let err = errno::Error::last();
+            let run = self.kvm_run_ptr.as_mut_ref();
+            if (err == errno::Error::new(libc::EFAULT)
+                || err == errno::Error::new(libc::EHWPOISON))
+                && ret == -1 && run.exit_reason == KVM_EXIT_MEMORY_FAULT {
+                    let memory = unsafe { run.__bindgen_anon_1.memory };
+                    Ok(VcpuExit::MemoryFault(
+                        memory.gpa,
+                        memory.size,
+                        memory.flags & KVM_MEMORY_EXIT_FLAG_PRIVATE > 0,
+                    ))
+                } else {
+                Err(err)
+            }
         }
     }
 
